@@ -10,7 +10,13 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
+from datetime import timedelta
 from pathlib import Path
+
+from environs import Env
+
+env = Env()
+env.read_env()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-*rpvnh^f6z7j!zw^@ckn2gox4k@k9#h@_20tjl*npw@=nu-xn3'
+SECRET_KEY = env.str('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -39,6 +45,10 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'recorder.apps.RecorderConfig',
+
+    'cloudinary_storage',
+    'cloudinary',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
@@ -123,3 +133,14 @@ STATIC_URL = 'static/'
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+# THIRD PARTY APPS  SETTINGS
+
+# cloudinary settings
+
+CLOUDINARY_STORAGE = {
+    'CLOUD_NAME': env.str('CLOUD_NAME'),
+    'API_KEY': env.str('CLOUDINARY_API_KEY'),
+    'API_SECRET': env.str('CLOUDINARY_API_SECRET')
+}
