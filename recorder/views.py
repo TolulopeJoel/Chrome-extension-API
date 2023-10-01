@@ -1,13 +1,12 @@
 import os
 import uuid
 
-from environs import Env
+from django_q.tasks import async_task
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-env = Env()
-env.read_env()
+from .tasks import append_video_chunk
 
 
 class VideoSessionView(APIView):
@@ -45,8 +44,7 @@ class VideoDataView(APIView):
 
         # Append the video chunk to video file
         if video_chunk:
-            with open(os.path.join(session_dir, 'record.webm'), 'ab') as video_file:
-                video_file.write(video_chunk)
+            async_task(append_video_chunk, session_id, video_chunk)
 
             return Response({'message': 'Video data chunk saved successfully'}, status=status.HTTP_201_CREATED)
         else:
