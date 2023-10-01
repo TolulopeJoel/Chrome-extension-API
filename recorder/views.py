@@ -32,7 +32,11 @@ class VideoSessionView(APIView):
 
 
 class VideoDataView(APIView):
+class VideoDataView(APIView):
     """
+    View to stream blob data
+    Save received video data chunk to a session directory.
+    And responds with a success message or an error if no data is received.
     View to stream blob data
     Save received video data chunk to a session directory.
     And responds with a success message or an error if no data is received.
