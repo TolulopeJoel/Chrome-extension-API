@@ -6,7 +6,12 @@ from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .tasks import append_video_chunk
+from .tasks import (
+    append_video_chunk,
+    convert_video_to_audio,
+    join_blob_chunks,
+    transcribe_video,
+)
 
 
 class VideoSessionView(APIView):
@@ -49,3 +54,40 @@ class VideoDataView(APIView):
             return Response({'message': 'Video data chunk saved successfully'}, status=status.HTTP_201_CREATED)
         else:
             return Response({'error': 'No video data received'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StopVideoView(APIView):
+    def get(self, request, session_id, format=None):
+        video_path = os.path.join('recorded_videos', session_id)
+
+        # join blob chunks
+        async_task(join_blob_chunks, session_id)
+
+        video_audio = async_task(
+            convert_video_to_audio, session_id, video_path
+        )
+
+        async_task(transcribe_video, video_audio)
+
+
+class VideoDetailView(APIView):
+    def get(self, request, session_id, format=None):
+        # As usual, check if the session directory exists
+        session_dir = os.path.join('recorded_videos', session_id)
+        if not os.path.exists(session_dir):
+            return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Define the path to the recorded video file
+        video_file_path = os.path.join(session_dir, 'final_video.mp4')
+
+        # Check if the video file exists
+        if not os.path.exists(video_file_path):
+            return Response({'error': 'Video not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        data = {
+            'session_id': session_id,
+            'video': video_file_path,
+            'transcription': ''
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
