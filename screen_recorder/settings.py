@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/4.2/ref/settings/
 """
 
 from datetime import timedelta
+import os
 from pathlib import Path
 
 from environs import Env
@@ -134,6 +135,9 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 
 # THIRD PARTY APPS  SETTINGS
 
@@ -143,4 +147,10 @@ CLOUDINARY_STORAGE = {
     'CLOUD_NAME': env.str('CLOUD_NAME'),
     'API_KEY': env.str('CLOUDINARY_API_KEY'),
     'API_SECRET': env.str('CLOUDINARY_API_SECRET')
+}
+
+# rest framework
+
+REST_FRAMEWORK = {
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',)
 }
