@@ -30,13 +30,8 @@ class VideoSessionView(APIView):
 
         return Response({'session_id': session_id}, status=status.HTTP_201_CREATED)
 
-
-class VideoDataView(APIView):
 class VideoDataView(APIView):
     """
-    View to stream blob data
-    Save received video data chunk to a session directory.
-    And responds with a success message or an error if no data is received.
     View to stream blob data
     Save received video data chunk to a session directory.
     And responds with a success message or an error if no data is received.
@@ -62,7 +57,11 @@ class VideoDataView(APIView):
 
 class StopVideoView(APIView):
     def get(self, request, session_id, format=None):
-        video_path = os.path.join('recorded_videos', session_id)
+        session_dir = os.path.join('recorded_videos', session_id)
+        video_path = os.path.join(session_dir, 'final_video.mp4')
+        
+        if not os.path.exists(video_path):
+            return Response({'error': 'session_dir not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # join blob chunks
         async_task(join_blob_chunks, session_id)
@@ -71,7 +70,9 @@ class StopVideoView(APIView):
             convert_video_to_audio, session_id, video_path
         )
 
-        async_task(transcribe_video, video_audio)
+        # async_task(transcribe_video, video_audio)
+        
+        return Response({'message': 'Recording stopped successfully'})
 
 
 class VideoDetailView(APIView):
