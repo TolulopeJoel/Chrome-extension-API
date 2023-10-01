@@ -1,73 +1,53 @@
-import tempfile
+import os
+import uuid
 
-import assemblyai as aai
-import cloudinary
-import cloudinary.uploader
 from environs import Env
-from moviepy.editor import VideoFileClip
-from rest_framework import generics, status
+from rest_framework import status
 from rest_framework.response import Response
-
-from .models import Video
-from .serializers import VideoSerializer
+from rest_framework.views import APIView
 
 env = Env()
 env.read_env()
 
-cloudinary.config(
-    cloud_name=env.str('CLOUD_NAME'),
-    api_key=env.str('CLOUDINARY_API_KEY'),
-    api_secret=env.str("CLOUDINARY_API_SECRET"),
-)
 
-
-class VideoCreateView(generics.CreateAPIView):
+class VideoSessionView(APIView):
     """
-    View for creating video objects.
+    View for returning a session ID
+    Start a new video recording session.
+    Generates a unique session ID using UUID and creates a directory to store session files.
     """
-    queryset = Video.objects.all()
-    serializer_class = VideoSerializer
+
+    def post(self, request, format=None):
+        # Start a new video recording session
+        session_id = str(uuid.uuid4())
+        # Create a directory to store session files
+        session_dir = os.path.join('recorded_videos', session_id)
+        os.makedirs(session_dir, exist_ok=True)
+
+        return Response({'session_id': session_id}, status=status.HTTP_201_CREATED)
 
 
-class VideoRetrieveView(generics.RetrieveAPIView):
+class VideoDataView(APIView):
     """
-    View for retrieving a specific video object by its ID.
+    View to stream blob data
+    Save received video data chunk to a session directory.
+    And responds with a success message or an error if no data is received.
     """
-    queryset = Video.objects.all()
-    serializer_class = VideoSerializer
 
-    def retrieve(self, request, *args, **kwargs):
-        """
-        Retrieve a specific video object by its ID, and provide its details including
-        transcription if available. If the transcription is missing, generate it
-        from the video's audio.
-        """
-        instance = self.get_object()
-        serializer_data = self.get_serializer(instance).data
+    def post(self, request, session_id, format=None):
+        # Ensure the session directory exists
+        session_dir = os.path.join('recorded_videos', session_id)
+        os.makedirs(session_dir, exist_ok=True)
 
-        if serializer_data['transcription'] == None:
+        # Save the received video data chunk to a file
+        video_chunk = request.data.get('video_chunk')
+        video_chunk = video_chunk.read()
 
-            video_path = serializer_data['video_file']
+        # Append the video chunk to video file
+        if video_chunk:
+            with open(os.path.join(session_dir, 'record.webm'), 'ab') as video_file:
+                video_file.write(video_chunk)
 
-            video = VideoFileClip(video_path)
-            video_audio = video.audio
-
-            # Create a temporary in-memory file to store the audio
-            with tempfile.NamedTemporaryFile(delete=False, suffix='.mp3') as temp_audio_file:
-                video_audio.write_audiofile(temp_audio_file.name)
-
-            cloud_audio = cloudinary.uploader.upload(
-                temp_audio_file.name, resource_type='auto'
-            )
-            object = Video.objects.get(id=serializer_data['id'])
-            object.video_audio = cloud_audio['secure_url']
-            object.save()
-
-            # transcribe the audio file
-            aai.settings.api_key = env.str(f"AAI_API_KEY")
-            transcriber = aai.Transcriber()
-            transcript = transcriber.transcribe(object.video_audio)
-            object.transcription = transcript.text
-            object.save()
-
-        return Response(serializer_data, status=status.HTTP_200_OK)
+            return Response({'message': 'Video data chunk saved successfully'}, status=status.HTTP_201_CREATED)
+        else:
+            return Response({'error': 'No video data received'}, status=status.HTTP_400_BAD_REQUEST)
