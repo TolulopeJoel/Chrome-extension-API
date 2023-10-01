@@ -1,7 +1,4 @@
-from cloudinary_storage.storage import VideoMediaCloudinaryStorage, RawMediaCloudinaryStorage
 from django.db import models
-from cloudinary.models import CloudinaryField
-from cloudinary import CloudinaryVideo
 
 
 class Video(models.Model):
@@ -14,7 +11,7 @@ class Video(models.Model):
     """
     title = models.CharField(max_length=100)
 
-    video_file = CloudinaryField(resource_type='video')
+    video_file = models.FileField(upload_to='videos/')
     video_audio = models.URLField(blank=True, null=True)
     transcription = models.URLField(blank=True, null=True)
 
