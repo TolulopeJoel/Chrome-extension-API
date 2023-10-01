@@ -1,5 +1,4 @@
 import os
-import shutil
 import struct
 
 import assemblyai as aai
@@ -14,12 +13,13 @@ def append_video_chunk(session_id, video_chunk):
     # Ensure the session directory exists
     session_dir = os.path.join('recorded_videos', session_id)
     os.makedirs(session_dir, exist_ok=True)
-
-    # Move the video_chunk to the session directory
-    chunk_destination = os.path.join(
-        session_dir, os.path.basename(video_chunk)
-    )
-    shutil.move(video_chunk, chunk_destination)
+    
+    file_name = f"{session_id}_chunk_{len(os.listdir(session_dir))}.blob"
+    file_path = os.path.join(session_dir, file_name)
+    
+    # Write the video data chunk to the file
+    with open(file_path, 'wb') as video_file:
+        video_file.write(video_chunk)
 
 
 def join_blob_chunks(session_id):
@@ -45,7 +45,6 @@ def join_blob_chunks(session_id):
 def convert_video_to_audio(session_id, video_path):
     # Ensure the session directory exists
     session_dir = os.path.join('recorded_videos', session_id)
-    os.makedirs(session_dir, exist_ok=True)
 
     video = VideoFileClip(video_path)
     audio = video.audio
