@@ -3,28 +3,37 @@ import struct
 
 import assemblyai as aai
 from environs import Env
-from moviepy.editor import VideoFileClip
+
+from .models import Video
 
 env = Env()
 env.read_env()
 
 
 def append_video_chunk(session_id, video_chunk):
+    """
+    Add blobs returned from the frontend to a folder
+    """
     # Ensure the session directory exists
     session_dir = os.path.join('recorded_videos', session_id)
     os.makedirs(session_dir, exist_ok=True)
-    
+
     file_name = f"{session_id}_chunk_{len(os.listdir(session_dir))}.blob"
     file_path = os.path.join(session_dir, file_name)
-    
+
     # Write the video data chunk to the file
     with open(file_path, 'wb') as video_file:
         video_file.write(video_chunk)
+    
+    # save path to database
+    video = Video.objects.get(session_id=session_id)
+    video.video_path = file_path
+    video.save()
 
 
-def join_blob_chunks(session_id):
+def join_video_chunks(session_id):
     """
-    Combine binary data chunks into a single output file.
+    Combine binary data chunks in folder to a single output video file.
 
     Each binary chunk file is expected to have a 4-byte header specifying the size of the data chunk
     that follows. The function reads this header, extracts the binary data chunk, and appends it to
@@ -42,22 +51,26 @@ def join_blob_chunks(session_id):
                 mp4_file.write(chunk_data)
 
 
-def convert_video_to_audio(session_id, video_path):
-    # Ensure the session directory exists
-    session_dir = os.path.join('recorded_videos', session_id)
-
-    video = VideoFileClip(video_path)
-    audio = video.audio
-
-    audio_path = os.path.join(f'{session_dir}/audio', 'record-audio.mp3')
-    audio.write_audiofile(audio_path, codec='mp3')
-
-    return audio_path
-
-
-def transcribe_video(video_audio):
+def transcribe_video(session_id, video_audio):
     aai.settings.api_key = env.str(f"AAI_API_KEY")
     transcriber = aai.Transcriber()
     transcript = transcriber.transcribe(video_audio)
 
-    return transcript
+    video = Video.objects.get(session_id=session_id)
+
+    while True:
+        if transcript.status == "completed":
+            video.is_completed = True
+            video.transcription = transcript.text
+            video.save()
+            return "completed"
+        elif transcript.status == "processing" or transcript.status == "queued":
+            video.is_completed = False
+            video.transcription = "processing..."
+            video.save()
+            continue
+        else:
+            video.is_completed = False
+            video.transcription = "No transcript available"
+            video.save()
+            return "failed"
