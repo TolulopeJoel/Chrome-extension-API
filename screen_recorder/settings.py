@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     'cloudinary',
     'rest_framework',
     'django_q',
+    'drf_spectacular',
 ]
 
 MIDDLEWARE = [
@@ -153,7 +154,8 @@ CLOUDINARY_STORAGE = {
 # rest framework
 
 REST_FRAMEWORK = {
-    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',)
+    'DEFAULT_RENDERER_CLASSES': ('rest_framework.renderers.JSONRenderer',),
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 Q_CLUSTER = {
@@ -165,4 +167,11 @@ Q_CLUSTER = {
     'queue_limit': 50,
     'bulk': 10,
     'orm': 'default',
+}
+
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Chrome Extension API',
+    'DESCRIPTION': '',
+    'VERSION': '1.0.0',
 }
