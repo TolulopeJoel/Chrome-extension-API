@@ -9,10 +9,9 @@ class Video(models.Model):
     and the file itself. It uses VideoMediaCloudinaryStorage to handle
     file uploads, making it possible to upload various types of video files.
     """
-    title = models.CharField(max_length=100)
-
-    video_file = models.FileField(upload_to='videos/')
-    video_audio = models.URLField(blank=True, null=True)
-    transcription = models.URLField(blank=True, null=True)
+    session_id = models.CharField(max_length=225)
+    is_completed = models.BooleanField(default=False)
+    video_path = models.CharField(max_length=225, blank=True, null=True)
+    transcription = models.TextField(blank=True, null=True)
 
     upload_date = models.DateTimeField(auto_now_add=True)
