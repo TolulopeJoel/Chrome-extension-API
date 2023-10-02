@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 from django_q.tasks import async_task
@@ -68,10 +69,12 @@ class StopVideoView(APIView):
             return Response({'error': 'Video not found'}, status=status.HTTP_404_NOT_FOUND)
 
         # background task join blob chunks
-        # async_task(join_video_chunks, session_id)
+        async_task(join_video_chunks, session_id)
 
         # background task transcribe video
         async_task(transcribe_video, session_id, video_path)
+        # give transcription process time to run
+        time.sleep(10)
 
         return Response({'message': 'Recording stopped successfully'})
 
