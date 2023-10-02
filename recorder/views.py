@@ -1,13 +1,17 @@
 import os
 import uuid
 
-from environs import Env
+from django_q.tasks import async_task
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-env = Env()
-env.read_env()
+from .tasks import (
+    append_video_chunk,
+    convert_video_to_audio,
+    join_blob_chunks,
+    transcribe_video,
+)
 
 
 class VideoSessionView(APIView):
@@ -25,7 +29,6 @@ class VideoSessionView(APIView):
         os.makedirs(session_dir, exist_ok=True)
 
         return Response({'session_id': session_id}, status=status.HTTP_201_CREATED)
-
 
 class VideoDataView(APIView):
     """
@@ -45,9 +48,51 @@ class VideoDataView(APIView):
 
         # Append the video chunk to video file
         if video_chunk:
-            with open(os.path.join(session_dir, 'record.webm'), 'ab') as video_file:
-                video_file.write(video_chunk)
+            async_task(append_video_chunk, session_id, video_chunk)
 
             return Response({'message': 'Video data chunk saved successfully'}, status=status.HTTP_201_CREATED)
         else:
             return Response({'error': 'No video data received'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class StopVideoView(APIView):
+    def get(self, request, session_id, format=None):
+        session_dir = os.path.join('recorded_videos', session_id)
+        video_path = os.path.join(session_dir, 'final_video.mp4')
+        
+        if not os.path.exists(video_path):
+            return Response({'error': 'session_dir not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # join blob chunks
+        async_task(join_blob_chunks, session_id)
+
+        video_audio = async_task(
+            convert_video_to_audio, session_id, video_path
+        )
+
+        # async_task(transcribe_video, video_audio)
+        
+        return Response({'message': 'Recording stopped successfully'})
+
+
+class VideoDetailView(APIView):
+    def get(self, request, session_id, format=None):
+        # As usual, check if the session directory exists
+        session_dir = os.path.join('recorded_videos', session_id)
+        if not os.path.exists(session_dir):
+            return Response({'error': 'Session not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        # Define the path to the recorded video file
+        video_file_path = os.path.join(session_dir, 'final_video.mp4')
+
+        # Check if the video file exists
+        if not os.path.exists(video_file_path):
+            return Response({'error': 'Video not found'}, status=status.HTTP_404_NOT_FOUND)
+
+        data = {
+            'session_id': session_id,
+            'video': video_file_path,
+            'transcription': ''
+        }
+
+        return Response(data, status=status.HTTP_200_OK)
