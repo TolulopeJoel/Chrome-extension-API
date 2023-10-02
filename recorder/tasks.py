@@ -36,6 +36,7 @@ def join_video_chunks(session_id):
     """
     input_dir = f'recorded_videos/{session_id}'
     blob_files = [file for file in os.listdir(input_dir)]
+    blob_files.sort()
     video_path = f'recorded_videos/{session_id}/final_video.mp4'
 
     with open(video_path, 'wb') as mp4_file:
