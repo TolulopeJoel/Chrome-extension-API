@@ -1,4 +1,5 @@
 import os
+import time
 import uuid
 
 from django_q.tasks import async_task
@@ -71,7 +72,9 @@ class StopVideoView(APIView):
         async_task(join_video_chunks, session_id)
 
         # background task transcribe video
-        # async_task(transcribe_video, open(video_path, 'rb'))
+        async_task(transcribe_video, session_id, video_path)
+        # give transcription process time to run
+        time.sleep(10)
 
         return Response({'message': 'Recording stopped successfully'})
 

@@ -24,11 +24,6 @@ def append_video_chunk(session_id, video_chunk):
     # Write the video data chunk to the file
     with open(file_path, 'wb') as video_file:
         video_file.write(video_chunk)
-    
-    # save path to database
-    video = Video.objects.get(session_id=session_id)
-    video.video_path = file_path
-    video.save()
 
 
 def join_video_chunks(session_id):
@@ -41,14 +36,21 @@ def join_video_chunks(session_id):
     """
     input_dir = f'recorded_videos/{session_id}'
     blob_files = [file for file in os.listdir(input_dir)]
+    blob_files.sort()
+    video_path = f'recorded_videos/{session_id}/final_video.mp4'
 
-    with open(f'recorded_videos/{session_id}/final_video.mp4', 'wb') as mp4_file:
+    with open(video_path, 'wb') as mp4_file:
         for blob_file in blob_files:
             blob_path = os.path.join(input_dir, blob_file)
             with open(blob_path, 'rb') as chunk_blob:
                 chunk_size = struct.unpack('I', chunk_blob.read(4))[0]
                 chunk_data = chunk_blob.read(chunk_size)
                 mp4_file.write(chunk_data)
+
+    # save path to database
+    video = Video.objects.get(session_id=session_id)
+    video.video_path = video_path
+    video.save()
 
 
 def transcribe_video(session_id, video_audio):
@@ -71,6 +73,6 @@ def transcribe_video(session_id, video_audio):
             continue
         else:
             video.is_completed = False
-            video.transcription = "No transcript available"
+            video.transcription = f"{transcript.status} No transcript available"
             video.save()
             return "failed"
